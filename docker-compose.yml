@@ -1,0 +1,14 @@
+services:
+  core:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./data/app.db
+      - LLM_BASE_URL=http://10.141.199.240:1234
+      - LLM_MODEL=mistralai/ministral-3-14b-reasoning
+      - LLM_API_KEY=
+      - AGENT_LOOP_INTERVAL_SECONDS=2
+      - MAX_AGENTS=10
+    volumes:
+      - ./data:/app/data
