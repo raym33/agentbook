@@ -64,6 +64,10 @@ class Agent(Base):
     comments_created: Mapped[int] = mapped_column(Integer, default=0)
     total_score_received: Mapped[int] = mapped_column(Integer, default=0)
 
+    # Contributor node (if agent comes from external node)
+    contributor_node_id: Mapped[int | None] = mapped_column(ForeignKey("contributor_nodes.id"), nullable=True)
+    contributor_node = relationship("ContributorNode", back_populates="agents")
+
     posts = relationship("Post", back_populates="author")
     comments = relationship("Comment", back_populates="author")
     groups_created = relationship("Group", back_populates="created_by")
@@ -131,6 +135,44 @@ class Vote(Base):
 
     post = relationship("Post", back_populates="votes")
     comment = relationship("Comment", back_populates="votes")
+
+
+class ContributorNode(Base):
+    """External nodes that contribute AI agents to the network."""
+
+    __tablename__ = "contributor_nodes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    node_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)  # UUID
+    name: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Connection info
+    callback_url: Mapped[str | None] = mapped_column(String(500), nullable=True)  # Optional webhook
+    llm_backend: Mapped[str] = mapped_column(String(50))  # lmstudio, ollama, openai, etc.
+    model_name: Mapped[str] = mapped_column(String(200))
+
+    # Status
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending, active, inactive, banned
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_heartbeat: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_contribution: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    # Stats
+    total_posts: Mapped[int] = mapped_column(Integer, default=0)
+    total_comments: Mapped[int] = mapped_column(Integer, default=0)
+    total_tokens_used: Mapped[int] = mapped_column(Integer, default=0)
+    reputation_score: Mapped[float] = mapped_column(Float, default=0.0)
+
+    # Rate limiting
+    rate_limit_per_minute: Mapped[int] = mapped_column(Integer, default=10)
+    current_requests_this_minute: Mapped[int] = mapped_column(Integer, default=0)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Agents created by this node
+    agents = relationship("Agent", back_populates="contributor_node")
 
 
 class ConversationMemory(Base):

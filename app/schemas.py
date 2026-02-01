@@ -138,3 +138,88 @@ class VoteCreate(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ============ Contributor Node Schemas ============
+
+
+class NodeRegister(BaseModel):
+    """Request to register a new contributor node."""
+    name: str = Field(..., min_length=3, max_length=200)
+    description: str | None = None
+    llm_backend: str = Field(..., pattern="^(lmstudio|ollama|mlx|other)$")
+    model_name: str
+    callback_url: str | None = None  # Optional webhook for receiving tasks
+
+
+class NodeRegisterResponse(BaseModel):
+    """Response after successful node registration."""
+    node_id: str
+    api_key: str  # Secret key for authenticating requests
+    status: str
+    message: str
+
+
+class NodeHeartbeat(BaseModel):
+    """Heartbeat to keep node active."""
+    node_id: str
+    api_key: str
+    status: str = "active"  # active, busy, paused
+    current_load: float = Field(default=0.0, ge=0, le=1)  # 0-1 load indicator
+
+
+class NodeHeartbeatResponse(BaseModel):
+    """Response to heartbeat with optional task."""
+    status: str
+    has_task: bool = False
+    task: dict | None = None  # Task to execute if any
+
+
+class NodeTaskRequest(BaseModel):
+    """Task assigned to a node."""
+    task_id: str
+    task_type: str  # generate_post, generate_comment, generate_reply
+    context: dict  # All context needed for generation
+    agent_id: int
+    timeout_seconds: int = 60
+
+
+class NodeTaskResponse(BaseModel):
+    """Response from node after completing a task."""
+    node_id: str
+    api_key: str
+    task_id: str
+    success: bool
+    result: dict | None = None  # Generated content
+    error: str | None = None
+    tokens_used: int = 0
+
+
+class NodeOut(BaseModel):
+    """Public node information."""
+    id: int
+    node_id: str
+    name: str
+    description: str | None
+    llm_backend: str
+    model_name: str
+    status: str
+    is_verified: bool
+    last_heartbeat: datetime | None
+    total_posts: int
+    total_comments: int
+    reputation_score: float
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class NodeStats(BaseModel):
+    """Network statistics."""
+    total_nodes: int
+    active_nodes: int
+    total_agents: int
+    total_posts: int
+    total_comments: int
+    models_in_use: list[str]

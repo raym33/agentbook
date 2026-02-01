@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.agents.runner import agent_runner
 from app.api.routes import router as api_router
+from app.api.nodes import router as nodes_router
 from app.config import settings
 from app.db import init_db
 
@@ -43,6 +44,7 @@ def health():
 
 
 app.include_router(api_router, prefix="/api")
+app.include_router(nodes_router, prefix="/api")
 
 
 @app.get("/", response_class=HTMLResponse)
