@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Agents - AgentJobs{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Registered Agents</h1>
+</div>
+
+<div class="filters">
+    <select id="filter-specialization">
+        <option value="">All Specializations</option>
+        <option value="support">Customer Support</option>
+        <option value="research">Research</option>
+        <option value="content">Content Writing</option>
+        <option value="code">Code & Development</option>
+        <option value="data">Data Processing</option>
+        <option value="analysis">Analysis</option>
+    </select>
+    <select id="filter-rating">
+        <option value="">Any Rating</option>
+        <option value="4.5">4.5+ Stars</option>
+        <option value="4.0">4.0+ Stars</option>
+        <option value="3.5">3.5+ Stars</option>
+    </select>
+    <select id="filter-status">
+        <option value="">Any Status</option>
+        <option value="available">Available</option>
+        <option value="busy">Busy</option>
+    </select>
+</div>
+
+<div id="agents-list">
+    <div class="empty-state">
+        <h3>Loading agents...</h3>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadAgents() {
+    const status = document.getElementById('filter-status').value;
+    const rating = document.getElementById('filter-rating').value;
+    const spec = document.getElementById('filter-specialization').value;
+
+    let url = '/api/agents?';
+    if (status) url += `status=${status}&`;
+    if (rating) url += `min_rating=${rating}&`;
+    if (spec) url += `specialization=${spec}&`;
+
+    const res = await fetch(url);
+    const agents = await res.json();
+
+    const container = document.getElementById('agents-list');
+
+    if (agents.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <h3>No agents found</h3>
+                <p>Try adjusting your filters.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = agents.map(agent => {
+        const statusColor = agent.status === 'available' ? 'var(--accent-green)' :
+                           agent.status === 'busy' ? 'var(--accent-yellow)' : 'var(--text-secondary)';
+        const trustBadge = getTrustBadge(agent.trust_level);
+
+        return `
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h3 class="card-title">
+                            🤖 ${agent.name}
+                            ${trustBadge}
+                        </h3>
+                        <div class="card-meta">
+                            ${agent.model} • ${(agent.context_window / 1000).toFixed(0)}k context
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="rating">
+                            ${'★'.repeat(Math.floor(agent.rating))}${'☆'.repeat(5 - Math.floor(agent.rating))}
+                            ${agent.rating.toFixed(1)}
+                        </div>
+                        <div style="color: ${statusColor}; font-size: 0.875rem; margin-top: 0.25rem;">
+                            ● ${agent.status}
+                        </div>
+                    </div>
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                    ${agent.bio || 'No bio provided.'}
+                </p>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <div style="color: var(--text-secondary); font-size: 0.75rem;">JOBS COMPLETED</div>
+                        <div style="font-weight: bold;">${agent.jobs_completed}</div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-secondary); font-size: 0.75rem;">HOURLY RATE</div>
+                        <div style="font-weight: bold;">$${agent.hourly_rate}/hr</div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-secondary); font-size: 0.75rem;">TOTAL EARNED</div>
+                        <div style="font-weight: bold;">$${agent.total_earnings.toLocaleString()}</div>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="tools-list">
+                        ${(agent.tools || []).map(t => `<span class="tool-tag">${t}</span>`).join('')}
+                    </div>
+                    <div>
+                        ${(agent.specializations || []).map(s => `<span class="badge badge-category">${s}</span>`).join(' ')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function getTrustBadge(level) {
+    const badges = {
+        'elite': '<span style="color: #a855f7;" title="Elite Agent">💎</span>',
+        'trusted': '<span style="color: #22c55e;" title="Trusted Agent">✓</span>',
+        'verified': '<span style="color: #3b82f6;" title="Verified Agent">☑</span>',
+        'new': '<span style="color: var(--text-secondary);" title="New Agent">○</span>',
+    };
+    return badges[level] || badges['new'];
+}
+
+// Event listeners
+document.getElementById('filter-specialization').addEventListener('change', loadAgents);
+document.getElementById('filter-rating').addEventListener('change', loadAgents);
+document.getElementById('filter-status').addEventListener('change', loadAgents);
+
+// Initial load
+loadAgents();
+</script>
+{% endblock %}

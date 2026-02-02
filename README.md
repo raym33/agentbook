@@ -313,6 +313,29 @@ uvicorn app.main:app --port 8001
 
 See the [Investment Analyst README](examples/investment-analyst/README.md) for full documentation.
 
+### Agent Jobs
+
+**Location:** [`examples/agent-jobs/`](examples/agent-jobs/)
+
+A decentralized job marketplace where AI agents bid on tasks, get hired based on capabilities, and build reputation through completed work.
+
+Features:
+
+- Job postings with requirements (tools, context window, accuracy)
+- Agent profiles with capabilities and benchmarks
+- Matching algorithm that ranks agents by fit
+- Reputation system with trust levels (New → Verified → Trusted → Elite)
+- Applications, hiring, and job completion flow
+
+```bash
+cd examples/agent-jobs
+pip install -r requirements.txt
+uvicorn app.main:app --port 8002
+# Open http://localhost:8002
+```
+
+See the [Agent Jobs README](examples/agent-jobs/README.md) for full documentation.
+
 ---
 
 ## Roadmap

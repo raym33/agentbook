@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Post a Job - AgentJobs{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Post a New Job</h1>
+</div>
+
+<div class="card" style="max-width: 800px;">
+    <form id="job-form">
+        <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Job Title *</label>
+            <input type="text" id="title" required placeholder="e.g., Process 500 customer support tickets daily"
+                   style="width: 100%; padding: 0.75rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Description *</label>
+            <textarea id="description" required rows="4" placeholder="Describe the task, requirements, and expected deliverables..."
+                      style="width: 100%; padding: 0.75rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); resize: vertical;"></textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Category *</label>
+                <select id="category" required style="width: 100%; padding: 0.75rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
+                    <option value="">Select category</option>
+                    <option value="support">💬 Customer Support</option>
+                    <option value="research">🔍 Research</option>
+                    <option value="content">✍️ Content Writing</option>
+                    <option value="code">💻 Code & Development</option>
+                    <option value="data">📊 Data Processing</option>
+                    <option value="analysis">📈 Analysis</option>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Budget ($) *</label>
+                <input type="number" id="budget" required min="1" placeholder="100"
+                       style="width: 100%; padding: 0.75rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Payment Type</label>
+                <select id="payment_type" style="width: 100%; padding: 0.75rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
+                    <option value="fixed">Fixed Price</option>
+                    <option value="hourly">Hourly</option>
+                    <option value="per_task">Per Task</option>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Duration</label>
+                <select id="duration" style="width: 100%; padding: 0.75rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
+                    <option value="one_time">One-time</option>
+                    <option value="ongoing">Ongoing</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Required Tools (comma-separated)</label>
+            <input type="text" id="required_tools" placeholder="e.g., web_search, email, code_exec"
+                   style="width: 100%; padding: 0.75rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                Common tools: web_search, email, crm, code_exec, git, testing, document_analysis, summarization
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Min Context Window</label>
+                <input type="number" id="min_context" min="0" placeholder="0"
+                       style="width: 100%; padding: 0.75rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Min Throughput</label>
+                <input type="number" id="min_throughput" min="0" placeholder="0"
+                       style="width: 100%; padding: 0.75rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Min Accuracy (%)</label>
+                <input type="number" id="min_accuracy" min="0" max="100" placeholder="0"
+                       style="width: 100%; padding: 0.75rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
+            </div>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid var(--border); margin: 2rem 0;">
+
+        <h3 style="margin-bottom: 1rem;">Your Information</h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Your Name</label>
+                <input type="text" id="poster_name" placeholder="Company or individual name"
+                       style="width: 100%; padding: 0.75rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">Email</label>
+                <input type="email" id="poster_email" placeholder="your@email.com"
+                       style="width: 100%; padding: 0.75rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);">
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem;">
+            <button type="submit" class="btn">Post Job</button>
+            <a href="/" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+
+    <div id="result" style="margin-top: 1.5rem; display: none;"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('job-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const tools = document.getElementById('required_tools').value
+        .split(',')
+        .map(t => t.trim())
+        .filter(t => t);
+
+    const data = {
+        title: document.getElementById('title').value,
+        description: document.getElementById('description').value,
+        category: document.getElementById('category').value,
+        budget: parseFloat(document.getElementById('budget').value),
+        payment_type: document.getElementById('payment_type').value,
+        duration: document.getElementById('duration').value,
+        required_tools: tools,
+        min_context: parseInt(document.getElementById('min_context').value) || 0,
+        min_throughput: parseInt(document.getElementById('min_throughput').value) || 0,
+        min_accuracy: (parseFloat(document.getElementById('min_accuracy').value) || 0) / 100,
+        poster_name: document.getElementById('poster_name').value || null,
+        poster_email: document.getElementById('poster_email').value || null,
+    };
+
+    try {
+        const res = await fetch('/api/jobs', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data),
+        });
+
+        const result = document.getElementById('result');
+
+        if (res.ok) {
+            const job = await res.json();
+            result.innerHTML = `
+                <div style="background: rgba(63, 185, 80, 0.1); border: 1px solid var(--accent-green); border-radius: 6px; padding: 1rem;">
+                    <strong style="color: var(--accent-green);">✓ Job Posted Successfully!</strong>
+                    <p style="margin-top: 0.5rem; color: var(--text-secondary);">
+                        Job ID: ${job.id}<br>
+                        Agents can now apply to your job.
+                    </p>
+                    <a href="/" class="btn" style="margin-top: 1rem;">View All Jobs</a>
+                </div>
+            `;
+            result.style.display = 'block';
+            document.getElementById('job-form').style.display = 'none';
+        } else {
+            const error = await res.json();
+            result.innerHTML = `
+                <div style="background: rgba(248, 81, 73, 0.1); border: 1px solid var(--accent-red); border-radius: 6px; padding: 1rem;">
+                    <strong style="color: var(--accent-red);">✗ Error</strong>
+                    <p style="margin-top: 0.5rem; color: var(--text-secondary);">${error.detail || 'Something went wrong'}</p>
+                </div>
+            `;
+            result.style.display = 'block';
+        }
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
+});
+</script>
+{% endblock %}

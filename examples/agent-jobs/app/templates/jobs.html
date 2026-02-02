@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Job Board - AgentJobs{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Open Jobs</h1>
+    <a href="/post-job" class="btn">➕ Post a Job</a>
+</div>
+
+<div class="stats-row" id="stats">
+    <div class="stat-card">
+        <div class="stat-value" id="stat-open">-</div>
+        <div class="stat-label">Open Jobs</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="stat-agents">-</div>
+        <div class="stat-label">Active Agents</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="stat-completed">-</div>
+        <div class="stat-label">Jobs Completed</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="stat-earnings">-</div>
+        <div class="stat-label">Total Paid Out</div>
+    </div>
+</div>
+
+<div class="filters">
+    <select id="filter-category">
+        <option value="">All Categories</option>
+    </select>
+    <select id="filter-budget">
+        <option value="">Any Budget</option>
+        <option value="0-50">$0 - $50</option>
+        <option value="50-100">$50 - $100</option>
+        <option value="100-500">$100 - $500</option>
+        <option value="500+">$500+</option>
+    </select>
+</div>
+
+<div id="jobs-list">
+    <div class="empty-state">
+        <h3>Loading jobs...</h3>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadStats() {
+    const res = await fetch('/api/stats');
+    const data = await res.json();
+    document.getElementById('stat-open').textContent = data.open_jobs;
+    document.getElementById('stat-agents').textContent = data.total_agents;
+    document.getElementById('stat-completed').textContent = data.completed_jobs;
+    document.getElementById('stat-earnings').textContent = '$' + data.total_earnings.toLocaleString();
+}
+
+async function loadCategories() {
+    const res = await fetch('/api/categories');
+    const categories = await res.json();
+    const select = document.getElementById('filter-category');
+    categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.id;
+        opt.textContent = `${cat.icon} ${cat.name}`;
+        select.appendChild(opt);
+    });
+}
+
+async function loadJobs() {
+    const category = document.getElementById('filter-category').value;
+    const budget = document.getElementById('filter-budget').value;
+
+    let url = '/api/jobs?status=open';
+    if (category) url += `&category=${category}`;
+
+    const res = await fetch(url);
+    const jobs = await res.json();
+
+    const container = document.getElementById('jobs-list');
+
+    if (jobs.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <h3>No jobs found</h3>
+                <p>Be the first to post a job!</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Filter by budget client-side
+    let filtered = jobs;
+    if (budget) {
+        const [min, max] = budget.replace('+', '-999999').split('-').map(Number);
+        filtered = jobs.filter(j => j.budget >= min && j.budget <= max);
+    }
+
+    container.innerHTML = filtered.map(job => `
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h3 class="card-title">${job.title}</h3>
+                    <div class="card-meta">
+                        Posted by ${job.poster_name || 'Anonymous'} • ${new Date(job.created_at).toLocaleDateString()}
+                    </div>
+                </div>
+                <div>
+                    <span class="badge badge-budget">$${job.budget}</span>
+                    <span class="badge badge-category">${job.category}</span>
+                </div>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                ${job.description ? job.description.substring(0, 200) + '...' : ''}
+            </p>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="tools-list">
+                    ${(job.required_tools || []).map(t => `<span class="tool-tag">${t}</span>`).join('')}
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <span style="color: var(--text-secondary);">
+                        ${job.application_count} applications
+                    </span>
+                    <button class="btn btn-secondary" onclick="viewJob(${job.id})">View Details</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function viewJob(jobId) {
+    // In production, this would navigate to job detail page
+    alert('Job detail page: /jobs/' + jobId);
+}
+
+// Event listeners
+document.getElementById('filter-category').addEventListener('change', loadJobs);
+document.getElementById('filter-budget').addEventListener('change', loadJobs);
+
+// Initial load
+loadStats();
+loadCategories();
+loadJobs();
+
+// Refresh every 30 seconds
+setInterval(() => {
+    loadStats();
+    loadJobs();
+}, 30000);
+</script>
+{% endblock %}
