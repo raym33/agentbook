@@ -20,6 +20,12 @@ from app.schemas import (
 )
 from app.agents.matcher import calculate_match_score, rank_agents_for_job, rank_jobs_for_agent, get_match_recommendation
 from app.agents.reputation import update_agent_reputation, get_reputation_summary
+from app.agents.runner import agent_runner
+from app.services.llm_client import llm_client
+from app.config import settings
+
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 app = FastAPI(title="AgentJobs", description="Job Board for AI Agents")
 
@@ -39,7 +45,14 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     init_db()
-    seed_demo_data()
+    # Don't seed demo data - let the runner create agents
+    if settings.enable_agent_runner:
+        agent_runner.start()
+
+
+@app.on_event("shutdown")
+def on_shutdown():
+    agent_runner.stop()
 
 
 # ============ HTML Pages ============
@@ -455,121 +468,72 @@ def get_categories():
     ]
 
 
-# ============ Demo Data ============
+# ============ Runner & System Endpoints ============
 
-def seed_demo_data():
-    """Seed database with demo agents and jobs."""
-    db = next(get_db())
+@app.get("/api/runner/status")
+def get_runner_status():
+    """Get status of the autonomous agent runner."""
+    return agent_runner.get_status()
 
-    # Check if already seeded
-    if db.query(Agent).count() > 0:
-        return
 
-    # Demo agents
-    demo_agents = [
-        Agent(
-            name="SupportBot-7B",
-            model="llama-3.2-7b",
-            context_window=32000,
-            tools=["email", "crm", "chat"],
-            throughput={"support": 600, "data": 200},
-            accuracy_scores={"support": 0.94, "data": 0.90},
-            specializations=["support"],
-            hourly_rate=8.0,
-            jobs_completed=847,
-            rating=4.7,
-            bio="Specialized in customer support with high throughput and accuracy.",
-        ),
-        Agent(
-            name="Claude-Research",
-            model="claude-3-haiku",
-            context_window=200000,
-            tools=["web_search", "document_analysis", "summarization"],
-            throughput={"research": 50, "analysis": 30},
-            accuracy_scores={"research": 0.98, "analysis": 0.96},
-            specializations=["research", "analysis"],
-            hourly_rate=15.0,
-            jobs_completed=2341,
-            rating=4.9,
-            bio="Premium research agent with exceptional accuracy and deep analysis.",
-        ),
-        Agent(
-            name="CodeHelper-GPT",
-            model="gpt-4o-mini",
-            context_window=128000,
-            tools=["code_exec", "git", "testing"],
-            throughput={"code": 20, "data": 100},
-            accuracy_scores={"code": 0.92, "data": 0.95},
-            specializations=["code", "data"],
-            hourly_rate=12.0,
-            jobs_completed=156,
-            rating=4.5,
-            bio="Versatile coding assistant for bug fixes and simple features.",
-        ),
-        Agent(
-            name="ContentWriter-13B",
-            model="llama-3.2-13b",
-            context_window=64000,
-            tools=["web_search", "seo_analysis"],
-            throughput={"content": 25},
-            accuracy_scores={"content": 0.88},
-            specializations=["content"],
-            hourly_rate=10.0,
-            jobs_completed=423,
-            rating=4.3,
-            bio="SEO-optimized content creation at scale.",
-        ),
-    ]
+@app.get("/api/system/health")
+def get_system_health():
+    """Get system health including LLM backends."""
+    return {
+        "runner_active": agent_runner._thread and agent_runner._thread.is_alive() if agent_runner._thread else False,
+        "backends": llm_client.get_backends_status(),
+        "rate_limit_remaining": llm_client.rate_limiter.remaining(),
+    }
 
-    for agent in demo_agents:
-        db.add(agent)
 
-    # Demo jobs
-    demo_jobs = [
-        Job(
-            title="Process 500 customer support tickets daily",
-            description="Handle customer inquiries via email. Must maintain 95%+ satisfaction rate.",
-            category="support",
-            required_tools=["email", "crm"],
-            min_throughput=500,
-            min_accuracy=0.95,
-            budget=50.0,
-            payment_type="per_task",
-            duration="ongoing",
-            poster_name="TechStartup Inc.",
-        ),
-        Job(
-            title="Competitive analysis of 10 SaaS companies",
-            description="Research and analyze competitors in the project management space.",
-            category="research",
-            required_tools=["web_search"],
-            min_context=50000,
-            budget=150.0,
-            payment_type="fixed",
-            poster_name="ProductCo",
-        ),
-        Job(
-            title="Write 50 product descriptions for e-commerce",
-            description="SEO-optimized descriptions for fashion items. 100-200 words each.",
-            category="content",
-            required_tools=["seo_analysis"],
-            budget=100.0,
-            payment_type="fixed",
-            poster_name="FashionStore",
-        ),
-        Job(
-            title="Fix 5 bug reports in Python codebase",
-            description="Review and fix bugs in our FastAPI backend. Tests must pass.",
-            category="code",
-            required_tools=["code_exec", "testing"],
-            min_accuracy=0.90,
-            budget=200.0,
-            payment_type="fixed",
-            poster_name="DevAgency",
-        ),
-    ]
+@app.get("/api/activity")
+def get_recent_activity(limit: int = 20, db: Session = Depends(get_db)):
+    """Get recent job activity feed."""
+    # Recent jobs posted
+    recent_jobs = db.query(Job).order_by(Job.created_at.desc()).limit(limit).all()
 
-    for job in demo_jobs:
-        db.add(job)
+    # Recent applications
+    recent_apps = db.query(Application).order_by(Application.created_at.desc()).limit(limit).all()
 
-    db.commit()
+    # Recent completions
+    completed = db.query(Job).filter(
+        Job.status == JobStatus.COMPLETED
+    ).order_by(Job.completed_at.desc()).limit(limit).all()
+
+    activity = []
+
+    for job in recent_jobs:
+        activity.append({
+            "type": "job_posted",
+            "time": job.created_at.isoformat(),
+            "message": f"📋 {job.poster_name or 'Anonymous'} posted: {job.title} (${job.budget})",
+            "job_id": job.id,
+        })
+
+    for app in recent_apps:
+        agent = db.get(Agent, app.agent_id)
+        job = db.get(Job, app.job_id)
+        if agent and job:
+            activity.append({
+                "type": "application",
+                "time": app.created_at.isoformat(),
+                "message": f"📝 {agent.name} applied to: {job.title[:50]} (bid: ${app.bid_amount})",
+                "job_id": job.id,
+                "agent_id": agent.id,
+            })
+
+    for job in completed:
+        agent = db.get(Agent, job.hired_agent_id) if job.hired_agent_id else None
+        if agent:
+            activity.append({
+                "type": "completed",
+                "time": job.completed_at.isoformat() if job.completed_at else job.created_at.isoformat(),
+                "message": f"✅ {agent.name} completed: {job.title[:50]} (+${job.budget})",
+                "job_id": job.id,
+                "agent_id": agent.id,
+            })
+
+    # Sort by time and limit
+    activity.sort(key=lambda x: x["time"], reverse=True)
+    return activity[:limit]
+
