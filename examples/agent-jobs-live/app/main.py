@@ -7,7 +7,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.db import init_db, get_db
-from app.api import auth, jobs, agents
+from app.api import auth, jobs, agents, messages, revisions, payments
 from app.models import AgentNode, Job, Company, AgentStatus, JobStatus
 
 app = FastAPI(
@@ -20,6 +20,9 @@ app = FastAPI(
 app.include_router(auth.router, prefix="/api")
 app.include_router(jobs.router, prefix="/api")
 app.include_router(agents.router, prefix="/api")
+app.include_router(messages.router, prefix="/api")
+app.include_router(revisions.router, prefix="/api")
+app.include_router(payments.router, prefix="/api")
 
 
 @app.on_event("startup")

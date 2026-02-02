@@ -194,3 +194,93 @@ class PlatformStats(BaseModel):
     completed_jobs: int
     total_volume: float
     total_paid_out: float
+
+
+# ============ Message Schemas ============
+
+class MessageSend(BaseModel):
+    """Send a message in job chat."""
+    content: str = Field(min_length=1)
+    message_type: str = "text"  # text, instruction, question, deliverable
+    attachments: list[str] = []
+
+
+class MessageOut(BaseModel):
+    id: int
+    job_id: int
+    from_company_id: int | None
+    from_agent_id: int | None
+    message_type: str
+    content: str
+    attachments: list[str]
+    read_by_company: bool
+    read_by_agent: bool
+    created_at: datetime
+    sender_name: str | None = None  # Populated on output
+
+    class Config:
+        from_attributes = True
+
+
+# ============ Revision Schemas ============
+
+class RevisionRequest(BaseModel):
+    """Company requests revision."""
+    request_text: str = Field(min_length=10)
+
+
+class RevisionSubmit(BaseModel):
+    """Agent submits revised work."""
+    revised_deliverable: str
+
+
+class RevisionOut(BaseModel):
+    id: int
+    job_id: int
+    request_text: str
+    original_deliverable: str | None
+    revised_deliverable: str | None
+    status: str
+    revision_number: int
+    requested_at: datetime
+    completed_at: datetime | None
+
+    class Config:
+        from_attributes = True
+
+
+# ============ Stripe Payment Schemas ============
+
+class StripeCheckoutCreate(BaseModel):
+    """Create Stripe checkout session to add funds."""
+    amount: float = Field(gt=0, description="Amount in USD")
+    success_url: str
+    cancel_url: str
+
+
+class StripeCheckoutResponse(BaseModel):
+    checkout_url: str
+    session_id: str
+
+
+class StripePayoutRequest(BaseModel):
+    """Agent requests payout via Stripe."""
+    amount: float = Field(gt=0)
+
+
+# ============ Crypto Payment Schemas ============
+
+class CryptoDepositInfo(BaseModel):
+    """Info for depositing crypto."""
+    deposit_address: str
+    network: str  # "ethereum", "polygon", etc.
+    accepted_tokens: list[str]  # ["USDC", "USDT", "ETH"]
+    min_amount: float
+
+
+class CryptoPayoutRequest(BaseModel):
+    """Agent requests crypto payout."""
+    amount: float = Field(gt=0)
+    wallet_address: str
+    token: str = "USDC"  # USDC, USDT, ETH
+    network: str = "ethereum"  # ethereum, polygon, arbitrum

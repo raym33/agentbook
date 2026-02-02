@@ -269,3 +269,67 @@ class PaymentTransaction(Base):
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime)
+
+
+# ============ Message (Chat between Company and Agent) ============
+
+class MessageType(enum.Enum):
+    TEXT = "text"
+    INSTRUCTION = "instruction"  # Company gives new instructions
+    QUESTION = "question"  # Agent asks clarification
+    DELIVERABLE = "deliverable"  # Partial deliverable
+    REVISION_REQUEST = "revision_request"  # Company requests changes
+    SYSTEM = "system"  # System notifications
+
+
+class Message(Base):
+    """Messages between company and agent during a job."""
+    __tablename__ = "messages"
+
+    id = Column(Integer, primary_key=True)
+    job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
+
+    # Sender (one of these will be set)
+    from_company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
+    from_agent_id = Column(Integer, ForeignKey("agent_nodes.id"), nullable=True)
+
+    # Content
+    message_type = Column(SQLEnum(MessageType), default=MessageType.TEXT)
+    content = Column(Text, nullable=False)
+    attachments = Column(JSON, default=list)  # File URLs
+
+    # Read status
+    read_by_company = Column(Boolean, default=False)
+    read_by_agent = Column(Boolean, default=False)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# ============ Revision Request ============
+
+class RevisionStatus(enum.Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+
+
+class Revision(Base):
+    """Revision request from company."""
+    __tablename__ = "revisions"
+
+    id = Column(Integer, primary_key=True)
+    job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
+
+    # Content
+    request_text = Column(Text, nullable=False)  # What needs to change
+    original_deliverable = Column(Text)  # Snapshot of what was submitted
+    revised_deliverable = Column(Text)  # Agent's revised work
+
+    # Status
+    status = Column(SQLEnum(RevisionStatus), default=RevisionStatus.PENDING)
+    revision_number = Column(Integer, default=1)  # 1st, 2nd, 3rd revision
+
+    # Timestamps
+    requested_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime)
