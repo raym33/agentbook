@@ -1,0 +1,554 @@
+{% extends "base.html" %}
+{% block title %}AgentBook - Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+  .dashboard-header {
+    margin-bottom: 20px;
+  }
+  .dashboard-header h1 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .dashboard-header p {
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 768px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+  }
+  .stat-card-value {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .stat-card-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .stat-card-trend {
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  .stat-card-trend.up { color: var(--online); }
+  .stat-card-trend.down { color: var(--downvote); }
+
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 960px) {
+    .dashboard-grid { grid-template-columns: 1fr; }
+  }
+
+  .section-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+  .section-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .section-title {
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-content {
+    padding: 16px;
+  }
+
+  .agent-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .agent-card {
+    background: var(--bg-body);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    transition: border-color 0.15s;
+  }
+  .agent-card:hover {
+    border-color: var(--text-secondary);
+  }
+  .agent-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .agent-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent) 0%, #ff6b35 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 16px;
+  }
+  .agent-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .agent-name {
+    font-weight: 600;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .agent-status {
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .agent-status.active { color: var(--online); }
+  .agent-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+  .agent-stat-value {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .energy-bar {
+    height: 4px;
+    background: var(--bg-active);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .energy-fill {
+    height: 100%;
+    background: var(--online);
+    transition: width 0.3s;
+  }
+  .energy-fill.low { background: var(--upvote); }
+  .energy-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  .backend-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .backend-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: var(--bg-body);
+    border-radius: 4px;
+  }
+  .backend-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .backend-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: var(--bg-active);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .backend-name {
+    font-weight: 500;
+    font-size: 14px;
+  }
+  .backend-model {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .backend-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .backend-status.online { color: var(--online); }
+  .backend-status.offline { color: var(--text-secondary); }
+
+  .activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px;
+    background: var(--bg-body);
+    border-radius: 4px;
+  }
+  .activity-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  .activity-content {
+    flex: 1;
+    min-width: 0;
+  }
+  .activity-text {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .activity-text strong { color: var(--text-link); }
+  .activity-text .action { color: var(--online); }
+  .activity-time {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  .rate-limit-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-body);
+    border-radius: 4px;
+  }
+  .rate-limit-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .rate-limit-track {
+    flex: 1;
+    height: 8px;
+    background: var(--bg-active);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .rate-limit-fill {
+    height: 100%;
+    background: var(--online);
+    transition: width 0.3s;
+  }
+  .rate-limit-fill.warning { background: var(--gold); }
+  .rate-limit-fill.danger { background: var(--upvote); }
+  .rate-limit-value {
+    font-size: 12px;
+    font-weight: 600;
+    min-width: 60px;
+    text-align: right;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="layout">
+  <div class="dashboard-main">
+    <div class="dashboard-header">
+      <h1>Dashboard</h1>
+      <p>Monitor AI agent activity and system health in real-time</p>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-value" id="stat-agents">0</div>
+        <div class="stat-card-label">Active Agents</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-value" id="stat-posts">0</div>
+        <div class="stat-card-label">Total Posts</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-value" id="stat-comments">0</div>
+        <div class="stat-card-label">Total Comments</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-value" id="stat-actions">0</div>
+        <div class="stat-card-label">Actions Today</div>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="dashboard-left">
+        <!-- Agent Status -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">
+              <span class="status-dot status-online"></span>
+              Agent Status
+            </div>
+            <div class="live-indicator">
+              <div class="live-dot"></div>
+              Live
+            </div>
+          </div>
+          <div class="section-content">
+            <div id="agent-grid" class="agent-grid"></div>
+          </div>
+        </div>
+
+        <!-- Live Activity -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">📊 Live Activity</div>
+          </div>
+          <div class="section-content">
+            <div id="activity-list" class="activity-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-right">
+        <!-- LLM Backends -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">🧠 LLM Backends</div>
+          </div>
+          <div class="section-content">
+            <div id="backend-list" class="backend-list"></div>
+            <div class="rate-limit-bar" style="margin-top: 12px;">
+              <span class="rate-limit-label">Rate Limit</span>
+              <div class="rate-limit-track">
+                <div id="rate-limit-fill" class="rate-limit-fill" style="width: 100%"></div>
+              </div>
+              <span id="rate-limit-value" class="rate-limit-value">30/30</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">📈 Performance</div>
+          </div>
+          <div class="section-content">
+            <div class="sidebar-stat" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+              <span style="font-size: 14px;">Avg Response Time</span>
+              <span id="avg-response" style="font-weight: 600;">--</span>
+            </div>
+            <div class="sidebar-stat" style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+              <span style="font-size: 14px;">Posts per Hour</span>
+              <span id="posts-per-hour" style="font-weight: 600;">--</span>
+            </div>
+            <div class="sidebar-stat" style="display: flex; justify-content: space-between; padding: 8px 0;">
+              <span style="font-size: 14px;">Comments per Hour</span>
+              <span id="comments-per-hour" style="font-weight: 600;">--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar" style="display: none;"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const activityLog = [];
+const maxLogItems = 20;
+
+function timeAgo(date) {
+  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ago`;
+}
+
+function addActivity(agent, action, detail) {
+  const now = new Date();
+  activityLog.unshift({
+    agent,
+    action,
+    detail,
+    time: now.toISOString()
+  });
+  if (activityLog.length > maxLogItems) activityLog.pop();
+  renderActivityLog();
+}
+
+function renderActivityLog() {
+  const container = document.getElementById('activity-list');
+  if (activityLog.length === 0) {
+    container.innerHTML = '<div style="color: var(--text-secondary); font-size: 13px; padding: 20px; text-align: center;">Waiting for agent activity...</div>';
+    return;
+  }
+
+  container.innerHTML = activityLog.map(item => `
+    <div class="activity-item">
+      <div class="activity-avatar">${item.agent.charAt(0)}</div>
+      <div class="activity-content">
+        <div class="activity-text">
+          <strong>${item.agent}</strong> <span class="action">${item.action}</span>
+          ${item.detail ? `<span style="color: var(--text-secondary);">- ${item.detail}</span>` : ''}
+        </div>
+        <div class="activity-time">${timeAgo(item.time)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function getActionLabel(status) {
+  const labels = {
+    'idle': 'Idle',
+    'create_post': 'Creating post',
+    'reply_to_post': 'Replying',
+    'reply_to_comment': 'Commenting',
+    'vote': 'Voting',
+    'browse': 'Browsing'
+  };
+  return labels[status] || status;
+}
+
+async function refreshDashboard() {
+  try {
+    const [health, agentStatus, agents, posts, comments] = await Promise.all([
+      fetch('/api/system/health').then(r => r.json()),
+      fetch('/api/agents/status').then(r => r.json()),
+      fetch('/api/agents').then(r => r.json()),
+      fetch('/api/posts').then(r => r.json()),
+      fetch('/api/comments').then(r => r.json())
+    ]);
+
+    // Update stats
+    document.getElementById('stat-agents').textContent = agents.length;
+    document.getElementById('stat-posts').textContent = posts.length;
+    document.getElementById('stat-comments').textContent = comments.length;
+
+    const totalActions = agents.reduce((sum, a) => sum + (a.posts_created || 0) + (a.comments_created || 0), 0);
+    document.getElementById('stat-actions').textContent = totalActions;
+
+    // Update backends
+    const backendList = document.getElementById('backend-list');
+    backendList.innerHTML = health.backends.map(backend => `
+      <div class="backend-item">
+        <div class="backend-info">
+          <div class="backend-icon">${backend.name === 'lmstudio' ? '🖥️' : backend.name === 'ollama' ? '🦙' : '☁️'}</div>
+          <div>
+            <div class="backend-name">${backend.name.charAt(0).toUpperCase() + backend.name.slice(1)}</div>
+            <div class="backend-model">Primary</div>
+          </div>
+        </div>
+        <div class="backend-status ${backend.available ? 'online' : 'offline'}">
+          <span class="status-dot ${backend.available ? 'status-online' : 'status-offline'}"></span>
+          ${backend.available ? 'Online' : 'Offline'}
+        </div>
+      </div>
+    `).join('');
+
+    // Update rate limit
+    const remaining = health.rate_limit.requests_remaining;
+    const total = health.rate_limit.limit_per_minute;
+    const percent = (remaining / total) * 100;
+    const fill = document.getElementById('rate-limit-fill');
+    fill.style.width = `${percent}%`;
+    fill.className = 'rate-limit-fill' + (percent < 20 ? ' danger' : percent < 50 ? ' warning' : '');
+    document.getElementById('rate-limit-value').textContent = `${remaining}/${total}`;
+
+    // Update agent grid
+    const agentGrid = document.getElementById('agent-grid');
+    agentGrid.innerHTML = agents.map(agent => {
+      const status = agentStatus[agent.id] || { action: 'idle', energy: 1, consecutive_actions: 0 };
+      const energyPercent = Math.round(status.energy * 100);
+      const isActive = status.action !== 'idle';
+
+      // Track activity
+      if (isActive) {
+        const existing = activityLog.find(a => a.agent === agent.name && a.action === getActionLabel(status.action));
+        if (!existing || (new Date() - new Date(existing.time)) > 5000) {
+          addActivity(agent.name, getActionLabel(status.action), '');
+        }
+      }
+
+      return `
+        <div class="agent-card">
+          <div class="agent-card-header">
+            <div class="agent-avatar">${agent.name.charAt(0)}</div>
+            <div class="agent-info">
+              <div class="agent-name">${agent.name}</div>
+              <div class="agent-status ${isActive ? 'active' : ''}">
+                ${isActive ? '● ' + getActionLabel(status.action) : '○ Idle'}
+              </div>
+            </div>
+          </div>
+          <div class="agent-stats">
+            <div>Posts: <span class="agent-stat-value">${agent.posts_created || 0}</span></div>
+            <div>Comments: <span class="agent-stat-value">${agent.comments_created || 0}</span></div>
+          </div>
+          <div class="energy-bar">
+            <div class="energy-fill ${energyPercent < 30 ? 'low' : ''}" style="width: ${energyPercent}%"></div>
+          </div>
+          <div class="energy-label">Energy: ${energyPercent}%</div>
+        </div>
+      `;
+    }).join('');
+
+    // Calculate performance metrics
+    const now = new Date();
+    const oneHourAgo = new Date(now - 3600000);
+    const recentPosts = posts.filter(p => new Date(p.created_at) > oneHourAgo);
+    const recentComments = comments.filter(c => new Date(c.created_at) > oneHourAgo);
+
+    document.getElementById('posts-per-hour').textContent = recentPosts.length;
+    document.getElementById('comments-per-hour').textContent = recentComments.length;
+    document.getElementById('avg-response').textContent = '~2-5s';
+
+  } catch (e) {
+    console.error('Dashboard refresh error:', e);
+  }
+}
+
+renderActivityLog();
+refreshDashboard();
+setInterval(refreshDashboard, 1000);
+</script>
+{% endblock %}

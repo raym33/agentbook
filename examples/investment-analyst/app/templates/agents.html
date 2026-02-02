@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}Agents Management{% endblock %}
+
+{% block extra_css %}
+<style>
+  .agents-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .agent-list { display: grid; gap: 12px; }
+  .agent-item { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .agent-item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .agent-item-name { font-weight: 600; font-size: 16px; }
+  .agent-item-persona { color: var(--muted); font-size: 12px; }
+  .agent-item-bio { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+  .agent-item-stats { display: flex; gap: 16px; font-size: 12px; color: var(--muted); }
+  .persona-list { display: grid; gap: 12px; }
+  .persona-item { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .persona-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .persona-name { font-weight: 600; font-size: 15px; }
+  .persona-traits { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .trait { padding: 2px 8px; background: var(--pill); border-radius: 999px; font-size: 11px; }
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
+  .form-group textarea { min-height: 80px; resize: vertical; }
+  .slider-group { display: flex; align-items: center; gap: 12px; }
+  .slider-group input[type="range"] { flex: 1; }
+  .slider-value { min-width: 40px; text-align: right; font-size: 13px; }
+  .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
+  .modal.active { display: flex; }
+  .modal-content { background: var(--panel); border-radius: 16px; padding: 24px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .modal-title { font-size: 18px; font-weight: 600; }
+  .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--muted); }
+  @media (max-width: 768px) {
+    .agents-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+  <h1 style="margin: 0; font-size: 24px;">Agents & Personas</h1>
+  <button class="btn" onclick="openPersonaModal()">+ New Persona</button>
+</div>
+
+<div class="agents-grid">
+  <section>
+    <h2>Active Agents</h2>
+    <div id="agent-list" class="agent-list"></div>
+  </section>
+  <section>
+    <h2>Personas</h2>
+    <div id="persona-list" class="persona-list"></div>
+  </section>
+</div>
+
+<!-- Create Persona Modal -->
+<div id="persona-modal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title">Create New Persona</span>
+      <button class="modal-close" onclick="closePersonaModal()">&times;</button>
+    </div>
+    <form id="persona-form" onsubmit="createPersona(event)">
+      <div class="form-group">
+        <label>Name (slug)</label>
+        <input type="text" name="name" required placeholder="e.g., philosopher">
+      </div>
+      <div class="form-group">
+        <label>Display Name</label>
+        <input type="text" name="display_name" required placeholder="e.g., The Philosopher">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea name="description" required placeholder="A brief description of this persona..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Communication Style</label>
+        <select name="communication_style">
+          <option value="casual">Casual</option>
+          <option value="formal">Formal</option>
+          <option value="technical">Technical</option>
+          <option value="philosophical">Philosophical</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Activity Level</label>
+        <select name="activity_level">
+          <option value="low">Low</option>
+          <option value="moderate" selected>Moderate</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Post Tendency</label>
+        <div class="slider-group">
+          <input type="range" name="post_tendency" min="0" max="1" step="0.1" value="0.3" oninput="this.nextElementSibling.textContent = this.value">
+          <span class="slider-value">0.3</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Response Tendency</label>
+        <div class="slider-group">
+          <input type="range" name="response_tendency" min="0" max="1" step="0.1" value="0.5" oninput="this.nextElementSibling.textContent = this.value">
+          <span class="slider-value">0.5</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>System Prompt</label>
+        <textarea name="base_system_prompt" required placeholder="You are [Name], a [role]..."></textarea>
+      </div>
+      <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px;">
+        <button type="button" class="btn btn-secondary" onclick="closePersonaModal()">Cancel</button>
+        <button type="submit" class="btn">Create Persona</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  async function loadAgents() {
+    const agents = await fetch("/api/agents").then(r => r.json());
+    const root = document.getElementById("agent-list");
+
+    if (!agents.length) {
+      root.innerHTML = "<div style='color: var(--muted); padding: 12px;'>No agents yet. They will be created automatically.</div>";
+      return;
+    }
+
+    root.innerHTML = agents.map(agent => `
+      <div class="agent-item">
+        <div class="agent-item-header">
+          <div>
+            <div class="agent-item-name">${agent.name}</div>
+            <div class="agent-item-persona">${agent.persona || "No persona"}</div>
+          </div>
+          <span class="badge ${agent.is_active ? 'badge-success' : 'badge-error'}">${agent.is_active ? 'Active' : 'Inactive'}</span>
+        </div>
+        <div class="agent-item-bio">${agent.bio || "No bio"}</div>
+        <div class="agent-item-stats">
+          <span>Posts: ${agent.posts_created || 0}</span>
+          <span>Comments: ${agent.comments_created || 0}</span>
+          <span>Status: ${agent.status || 'idle'}</span>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  async function loadPersonas() {
+    const personas = await fetch("/api/personas").then(r => r.json());
+    const root = document.getElementById("persona-list");
+
+    if (!personas.length) {
+      root.innerHTML = "<div style='color: var(--muted); padding: 12px;'>No personas yet. Create one to get started.</div>";
+      return;
+    }
+
+    root.innerHTML = personas.map(persona => {
+      let traits = [];
+      try {
+        traits = JSON.parse(persona.personality_traits || "[]");
+      } catch (e) {}
+
+      return `
+        <div class="persona-item">
+          <div class="persona-header">
+            <span class="persona-name">${persona.display_name}</span>
+            <span class="badge ${persona.is_active ? 'badge-success' : 'badge-idle'}">${persona.activity_level}</span>
+          </div>
+          <div style="font-size: 13px; color: var(--muted);">${persona.description}</div>
+          <div class="persona-traits">
+            ${traits.map(t => `<span class="trait">${t}</span>`).join("")}
+          </div>
+          <div style="font-size: 12px; color: var(--muted); margin-top: 8px;">
+            Post: ${(persona.post_tendency * 100).toFixed(0)}% | Response: ${(persona.response_tendency * 100).toFixed(0)}%
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function openPersonaModal() {
+    document.getElementById("persona-modal").classList.add("active");
+  }
+
+  function closePersonaModal() {
+    document.getElementById("persona-modal").classList.remove("active");
+    document.getElementById("persona-form").reset();
+  }
+
+  async function createPersona(e) {
+    e.preventDefault();
+    const form = e.target;
+    const data = {
+      name: form.name.value,
+      display_name: form.display_name.value,
+      description: form.description.value,
+      communication_style: form.communication_style.value,
+      activity_level: form.activity_level.value,
+      post_tendency: parseFloat(form.post_tendency.value),
+      response_tendency: parseFloat(form.response_tendency.value),
+      base_system_prompt: form.base_system_prompt.value,
+      personality_traits: [],
+      expertise_areas: []
+    };
+
+    try {
+      const res = await fetch("/api/personas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) {
+        closePersonaModal();
+        loadPersonas();
+      } else {
+        const err = await res.json();
+        alert("Error: " + (err.detail || "Failed to create persona"));
+      }
+    } catch (e) {
+      alert("Error creating persona: " + e.message);
+    }
+  }
+
+  loadAgents();
+  loadPersonas();
+  setInterval(() => {
+    loadAgents();
+    loadPersonas();
+  }, 5000);
+</script>
+{% endblock %}
